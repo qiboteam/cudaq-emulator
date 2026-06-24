@@ -95,6 +95,10 @@ def _transform_platform_py(platform_py: Path) -> None:
     )
     text = text.replace("EmulatorController(", "CudaqEmulatorController(")
 
+    # Drop base emulator imports that become unused after CUDA-Q rewiring.
+    text = re.sub(r"^\s*EmulatorController,\n", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^\s*HamiltonianConfig,\n", "", text, flags=re.MULTILINE)
+
     platform_py.write_text(text)
 
 

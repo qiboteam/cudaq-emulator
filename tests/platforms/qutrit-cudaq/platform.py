@@ -3,9 +3,7 @@ import pathlib
 from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
-    EmulatorController,
     FluxEmulatorConfig,
-    HamiltonianConfig,
 )
 from qibolab_cudaq_emulator import CudaqHamiltonianConfig, CudaqEmulatorController
 
