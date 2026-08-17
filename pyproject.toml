@@ -7,10 +7,18 @@ name = "qibolab-cudaq-emulator"
 version = "0.1.0"
 description = "External CUDA-Q emulator plugin for qibolab main"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
   "qibolab==0.2.15",
   "cudaq==0.14.0",
+  "qibo>=0.3.0,<0.4.0",
+  "matplotlib>=3.5",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=9",
+  "qutip>=5.0.2,<6.0.0",
 ]
 
 [tool.setuptools.package-dir]

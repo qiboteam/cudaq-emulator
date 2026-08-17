@@ -6,7 +6,7 @@ External CUDA-Q emulator plugin for qibolab.
 
 - qibolab = 0.2.15
 - cudaq = 0.14.0
-- Python >= 3.10
+- Python >= 3.11
 
 Compatibility requirements are defined in [pyproject.toml](pyproject.toml).
 
@@ -30,6 +30,15 @@ The plugin provides:
 From this directory:
 
 ```bash
+pip install -e .
+```
+
+If `cudaq==0.14.0` resolves to an unusable CUDA Quantum runtime package on your
+system, install the matching runtime wheel explicitly first and then install the
+plugin:
+
+```bash
+pip install cuda-quantum-cu12==0.14.0
 pip install -e .
 ```
 
@@ -93,6 +102,7 @@ Reference platform examples corresponding to those found in qibolab 0.2.15 are a
 Run tests from this directory:
 
 ```bash
+pip install -e ".[test]"
 pytest -q
 ```
 
@@ -100,6 +110,7 @@ Notes:
 
 - tests use platform definitions under [tests/platforms](tests/platforms)
 - tests skip if cudaq is not available
+- tests also require the `test` extra because the mapping diagnostics use `qutip`
 
 ## Scope
 
