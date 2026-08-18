@@ -37,7 +37,7 @@
           "coupling": 12000000.0
         }
       },
-      "kind": "cudaq_hamiltonian"
+      "kind": "hamiltonian"
     },
     "0/drive": {
       "kind": "drive-emulator",

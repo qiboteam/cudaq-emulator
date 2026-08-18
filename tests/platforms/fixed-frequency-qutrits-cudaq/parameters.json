@@ -5,7 +5,7 @@
   },
   "configs": {
     "hamiltonian": {
-      "kind": "cudaq_hamiltonian",
+      "kind": "hamiltonian",
       "transmon_levels": 3,
       "qubits": {
         "0": {

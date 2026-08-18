@@ -4,13 +4,14 @@ from qibolab import ConfigKinds, DcChannel, IqChannel, Platform, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
     FluxEmulatorConfig,
+    HamiltonianConfig,
 )
-from qibolab_cudaq_emulator import CudaqHamiltonianConfig, CudaqEmulatorController
+from qibolab_cudaq_emulator import CudaqEmulatorController
 
 
 FOLDER = pathlib.Path(__file__).parent
 
-ConfigKinds.extend([CudaqHamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
+ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
 
 
 def create() -> Platform:

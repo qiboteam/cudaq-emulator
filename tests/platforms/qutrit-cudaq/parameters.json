@@ -19,7 +19,7 @@
           }
         }
       },
-      "kind": "cudaq_hamiltonian"
+      "kind": "hamiltonian"
     },
     "0/drive": {
       "kind": "drive-emulator",

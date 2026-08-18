@@ -22,7 +22,6 @@ This package keeps CUDA-Q-specific emulator behavior outside qibolab core while 
 The plugin provides:
 
 - CudaqEngine
-- CudaqHamiltonianConfig
 - CudaqEmulatorController
 
 ## Installation
@@ -52,44 +51,32 @@ Starting from that base setup, switch to this plugin by applying only the change
 Keep your existing qibolab emulator imports, then add:
 
 ```python
-from qibolab_cudaq_emulator import CudaqEmulatorController, CudaqHamiltonianConfig
+from qibolab_cudaq_emulator import CudaqEmulatorController
 ```
 
-### 2. Register plugin config kind
-
-If your platform uses `ConfigKinds`, extend it to include the plugin Hamiltonian config:
-
-```python
-ConfigKinds.extend([CudaqHamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
-```
-
-### 3. Swap emulator controller class
+### 2. Swap emulator controller class
 
 In your `instruments` mapping, replace `EmulatorController(...)` with
 `CudaqEmulatorController(...)` and keep your existing channels mapping.
 
-### 4. Swap Hamiltonian config class
+### 3. Keep the existing emulator config kinds
 
-Swap the base emulator Hamiltonian config to the CUDA-Q one.
-
-How you do this depends on where your platform stores configs:
-
-- If configs are inline in Python, replace `HamiltonianConfig(...)` with `CudaqHamiltonianConfig(...)`.
-- If configs are loaded from platform files (common in qibolab), update your `parameters.json` so:
-    - `configs.hamiltonian.kind` is `"cudaq_hamiltonian"`
-    - the Hamiltonian payload fields match the CUDA-Q plugin model.
+The plugin works with qibolab's standard emulator configs, so you can keep the
+existing `HamiltonianConfig`, `DriveEmulatorConfig`, and `FluxEmulatorConfig`
+wiring in both Python and `parameters.json`.
 
 The snippet below shows the key edits in one place:
 
 ```python
 from qibolab import ConfigKinds
 from qibolab.instruments.emulator import (
+    HamiltonianConfig,
     DriveEmulatorConfig,
     FluxEmulatorConfig,
 )
-from qibolab_cudaq_emulator import CudaqEmulatorController, CudaqHamiltonianConfig
+from qibolab_cudaq_emulator import CudaqEmulatorController
 
-ConfigKinds.extend([CudaqHamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
+ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig, FluxEmulatorConfig])
 
 instruments = {
     "emulator": CudaqEmulatorController(address="0.0.0.0", channels=channels),

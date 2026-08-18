@@ -7,6 +7,7 @@ import pytest
 
 from qibolab._core.instruments.emulator.engine.qutip import QutipEngine
 from qibolab_cudaq_emulator import CudaqEngine
+from qibolab_cudaq_emulator.hamiltonians import coupling_term
 
 def test_cudaq_basis_mapping_is_explicit(split_transmon_coupler_platform):
     engine = CudaqEngine()
@@ -68,7 +69,7 @@ def test_cudaq_pair_01_coupling_matches_reference_subspace(
     qutip_state = qutip_result.states[1].full()[:, 0]
     qutip_target_index = int(np.argmax(np.abs(qutip_state)))
 
-    cudaq_hamiltonian = cudaq_cfg._coupling_term((0, 1), coupling, cudaq_engine)
+    cudaq_hamiltonian = coupling_term(cudaq_cfg, (0, 1), coupling, cudaq_engine)
     cudaq_result = cudaq_engine.evolve(
         hamiltonian=cudaq_hamiltonian,
         initial_state=cudaq_engine.basis(cudaq_cfg.dims, [1, 0, 0]),

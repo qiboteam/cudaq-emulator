@@ -9,13 +9,13 @@ import pytest
 
 import qibolab_cudaq_emulator.controller as controller_module
 from qibolab._core.instruments.emulator.engine.abstract import OperatorEvolution
+from qibolab._core.instruments.emulator.hamiltonians import HamiltonianConfig
 from qibolab._core.pulses import Delay
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import Parameter, Sweeper
 from qibolab_cudaq_emulator import (
     CudaqEmulatorController,
     CudaqEngine,
-    CudaqHamiltonianConfig,
 )
 from qibolab_cudaq_emulator.hamiltonians import control_operator
 
@@ -48,7 +48,7 @@ def _acquisition_handle(platform, sequence):
 def test_cudaq_platform_executes_with_plugin_controller(platform):
     controller = _controller(platform)
     assert isinstance(controller.engine, CudaqEngine)
-    assert isinstance(platform.parameters.configs["hamiltonian"], CudaqHamiltonianConfig)
+    assert isinstance(platform.parameters.configs["hamiltonian"], HamiltonianConfig)
 
     sequence = platform.natives.single_qubit[0].MZ()
     acquisition_handle = _acquisition_handle(platform, sequence)

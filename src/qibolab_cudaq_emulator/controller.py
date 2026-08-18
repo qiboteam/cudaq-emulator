@@ -35,7 +35,13 @@ from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
 
 from .engine import CudaqEngine
-from .hamiltonians import CudaqHamiltonianConfig, control_operator
+from .hamiltonians import (
+    control_operator,
+    dissipation,
+    hilbert_space_dims,
+    initial_state,
+    static_hamiltonian,
+)
 
 
 def _channel_target_id(channel: str) -> int:
@@ -121,8 +127,8 @@ class CudaqEmulatorController(EmulatorController):
         if len(sweepers) == 0:
             sequence_ = update_sequence(sequence, updates)
             configs_ = update_configs(configs, updates)
-            config = cast(CudaqHamiltonianConfig, configs_["hamiltonian"])
-            hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
+            hconfig = cast(HamiltonianConfig, configs_["hamiltonian"])
+            hamiltonian = static_hamiltonian(hconfig, config=configs_, engine=self.engine)
             time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
             time_hamiltonian = self.engine._compatible_time_hamiltonian(time_hamiltonian)
             if time_hamiltonian is not None:
@@ -165,8 +171,8 @@ class CudaqEmulatorController(EmulatorController):
             return super()._sweep(sequence, configs, sweepers, updates)
 
         batch_specs = self._make_sweep_batches(sequence, configs, sweepers, updates)
-        config = cast(CudaqHamiltonianConfig, configs["hamiltonian"])
-        dimensions = config.hilbert_space_dims()
+        hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
+        dimensions = hilbert_space_dims(hconfig)
 
         flattened_specs = self._flatten_batch_specs(batch_specs)
         hamiltonian_list = [spec[0] for spec in flattened_specs]
@@ -181,9 +187,9 @@ class CudaqEmulatorController(EmulatorController):
 
         sim_results = self.engine.evolve(
             hamiltonian=hamiltonian_list,
-            initial_state=config.initial_state(self.engine),
+            initial_state=initial_state(hconfig, self.engine),
             time=evolution_times,
-            collapse_operators=[config.dissipation(self.engine) for _ in hamiltonian_list],
+            collapse_operators=[dissipation(hconfig, self.engine) for _ in hamiltonian_list],
             time_hamiltonian=None,
             dimensions=dimensions,
         )
@@ -199,7 +205,7 @@ class CudaqEmulatorController(EmulatorController):
 
             state_dms = np.stack(
                 [
-                    self.engine.get_state_dm(state, dimensions=config.dims)
+                    self.engine.get_state_dm(state, dimensions=hconfig.dims)
                     for state in evolution_states
                 ]
             )
@@ -217,10 +223,10 @@ class CudaqEmulatorController(EmulatorController):
     ) -> NDArray | tuple[NDArray, np.ndarray | None]:
         sequence_ = update_sequence(sequence, updates)
         configs_ = update_configs(configs, updates)
-        config = cast(CudaqHamiltonianConfig, configs_["hamiltonian"])
-        hamiltonian = config.hamiltonian(config=configs_, engine=self.engine)
+        hconfig = cast(HamiltonianConfig, configs_["hamiltonian"])
+        hamiltonian = static_hamiltonian(hconfig, config=configs_, engine=self.engine)
         time_hamiltonian = self._pulse_hamiltonian(sequence_, configs_)
-        dimensions = config.hilbert_space_dims()
+        dimensions = hilbert_space_dims(hconfig)
         measurement_times = self._measurement_times(sequence_)
         _, measurement_indices, evolution_times = self._evolution_time_data(
             measurement_times
@@ -231,9 +237,9 @@ class CudaqEmulatorController(EmulatorController):
 
         sim_results = self.engine.evolve(
             hamiltonian=hamiltonian,
-            initial_state=config.initial_state(self.engine),
+            initial_state=initial_state(hconfig, self.engine),
             time=evolution_times,
-            collapse_operators=config.dissipation(self.engine),
+            collapse_operators=dissipation(hconfig, self.engine),
             time_hamiltonian=time_hamiltonian,
             dimensions=dimensions,
             save_evolution=self.save_dir,
@@ -243,7 +249,7 @@ class CudaqEmulatorController(EmulatorController):
         evolution_states = self.engine.get_evolution_states(sim_results)[1:]
         states = np.stack(
             [
-                self.engine.get_state_dm(state, dimensions=config.dims)
+                self.engine.get_state_dm(state, dimensions=hconfig.dims)
                 for state in evolution_states
             ]
         )[measurement_indices]
@@ -286,7 +292,7 @@ class CudaqEmulatorController(EmulatorController):
 def hamiltonian(
     pulses: Iterable[PulseLike],
     config: Config,
-    hamiltonian: CudaqHamiltonianConfig,
+    hamiltonian: HamiltonianConfig,
     hilbert_space_index: int,
     target_id: int,
     engine: CudaqEngine,
@@ -307,7 +313,7 @@ def hamiltonians(
     engine: CudaqEngine,
     sampling_rate: float,
 ) -> Iterable[tuple[object | None, list[Modulated]]]:
-    hconfig = cast(CudaqHamiltonianConfig, configs["hamiltonian"])
+    hconfig = cast(HamiltonianConfig, configs["hamiltonian"])
     return (
         hamiltonian(
             sequence.channel(channel),

@@ -3,11 +3,12 @@ from pathlib import Path
 from qibolab import ConfigKinds, Hardware, IqChannel, Qubit
 from qibolab.instruments.emulator import (
     DriveEmulatorConfig,
+    HamiltonianConfig,
 )
-from qibolab_cudaq_emulator import CudaqHamiltonianConfig, CudaqEmulatorController
+from qibolab_cudaq_emulator import CudaqEmulatorController
 
 
-ConfigKinds.extend([CudaqHamiltonianConfig, DriveEmulatorConfig])
+ConfigKinds.extend([HamiltonianConfig, DriveEmulatorConfig])
 
 
 def create() -> Hardware:
