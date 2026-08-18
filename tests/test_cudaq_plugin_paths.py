@@ -21,7 +21,6 @@ from qibolab_cudaq_emulator.hamiltonians import control_operator
 
 
 NSHOTS = 1000
-TARGET_SINGLE_QUBIT_PLATFORM = "qubit-cudaq"
 
 
 def _controller(platform) -> CudaqEmulatorController:
@@ -32,13 +31,6 @@ def _controller(platform) -> CudaqEmulatorController:
     ]
     assert len(controllers) == 1
     return controllers[0]
-
-
-def _require_single_qubit_platform(platform_name: str) -> None:
-    if platform_name != TARGET_SINGLE_QUBIT_PLATFORM:
-        pytest.skip(
-            f"Plugin path assertion is specific to '{TARGET_SINGLE_QUBIT_PLATFORM}', got '{platform_name}'."
-        )
 
 
 def _acquisition_handle(platform, sequence):
@@ -57,22 +49,21 @@ def test_cudaq_platform_executes_with_plugin_controller(platform):
     assert result[acquisition_handle].shape == (NSHOTS,)
 
 
-def test_cudaq_batch_sweep_path(platform, platform_name):
-    _require_single_qubit_platform(platform_name)
-    controller = _controller(platform)
+def test_cudaq_batch_sweep_path(single_qubit_platform):
+    controller = _controller(single_qubit_platform)
     controller.use_batch_sweep = True
 
-    q0 = platform.natives.single_qubit[0]
+    q0 = single_qubit_platform.natives.single_qubit[0]
     sequence = q0.RX() | q0.MZ()
     drive_channel, drive_pulse = sequence[0]
-    acquisition_handle = _acquisition_handle(platform, sequence)
+    acquisition_handle = _acquisition_handle(single_qubit_platform, sequence)
     sweeper = Sweeper(
         parameter=Parameter.amplitude,
         values=np.array([0.0, drive_pulse.amplitude], dtype=float),
         pulses=[drive_pulse],
     )
 
-    result = platform.execute([sequence], [[sweeper]], nshots=NSHOTS)
+    result = single_qubit_platform.execute([sequence], [[sweeper]], nshots=NSHOTS)
 
     assert result[acquisition_handle].shape == (NSHOTS, 2)
 
@@ -81,18 +72,17 @@ def test_cudaq_batch_sweep_path(platform, platform_name):
         values=np.array([0.0, 1e5], dtype=float),
         channels=[drive_channel],
     )
-    frequency_result = platform.execute(
+    frequency_result = single_qubit_platform.execute(
         [sequence], [[frequency_sweeper]], nshots=NSHOTS
     )
     assert frequency_result[acquisition_handle].shape == (NSHOTS, 2)
 
 
-def test_cudaq_batch_sweep_accepts_single_result(platform, platform_name, monkeypatch):
-    _require_single_qubit_platform(platform_name)
-    controller = _controller(platform)
+def test_cudaq_batch_sweep_accepts_single_result(single_qubit_platform, monkeypatch):
+    controller = _controller(single_qubit_platform)
     controller.use_batch_sweep = True
 
-    q0 = platform.natives.single_qubit[0]
+    q0 = single_qubit_platform.natives.single_qubit[0]
     sequence = q0.RX() | q0.MZ()
     _, drive_pulse = sequence[0]
     sweeper = Sweeper(
@@ -115,21 +105,20 @@ def test_cudaq_batch_sweep_accepts_single_result(platform, platform_name, monkey
 
     states, coefficients = controller._sweep(
         sequence.align_to_delays(),
-        platform.parameters.configs,
+        single_qubit_platform.parameters.configs,
         [[sweeper]],
     )
     assert states.shape == (1, 1, 2, 2)
     assert coefficients is None
 
 
-def test_cudaq_save_evolution_artifacts(platform, platform_name, tmp_path):
-    _require_single_qubit_platform(platform_name)
-    controller = _controller(platform)
+def test_cudaq_save_evolution_artifacts(single_qubit_platform, tmp_path):
+    controller = _controller(single_qubit_platform)
     controller.save_dir = tmp_path
 
-    q0 = platform.natives.single_qubit[0]
+    q0 = single_qubit_platform.natives.single_qubit[0]
     sequence = q0.RX() | q0.MZ()
-    platform.execute([sequence], nshots=NSHOTS)
+    single_qubit_platform.execute([sequence], nshots=NSHOTS)
 
     assert (tmp_path / "operators.qu").is_file()
     assert (tmp_path / "time_coefficients.npy").is_file()
@@ -145,24 +134,25 @@ def test_cudaq_save_evolution_artifacts(platform, platform_name, tmp_path):
     assert len(state_payload.states) == 2
 
 
-def test_cudaq_dump_simulation_operator_branches(platform, platform_name, tmp_path, monkeypatch):
-    _require_single_qubit_platform(platform_name)
-    controller = _controller(platform)
-    q0 = platform.natives.single_qubit[0]
+def test_cudaq_dump_simulation_operator_branches(
+    single_qubit_platform, tmp_path, monkeypatch
+):
+    controller = _controller(single_qubit_platform)
+    q0 = single_qubit_platform.natives.single_qubit[0]
     mz_sequence = q0.MZ()
     delay_only_sequence = PulseSequence(
-        [(platform.qubits[0].acquisition, Delay(duration=10.0))]
+        [(single_qubit_platform.qubits[0].acquisition, Delay(duration=10.0))]
     )
 
     assert controller._pulse_hamiltonian(
         delay_only_sequence,
-        platform.parameters.configs,
+        single_qubit_platform.parameters.configs,
     ) is None
 
     controller.save_dir = tmp_path / "no_pulse"
     controller._dump_simulation(
         mz_sequence,
-        platform.parameters.configs,
+        single_qubit_platform.parameters.configs,
         np.zeros((1, 2, 2)),
         None,
     )
@@ -175,7 +165,7 @@ def test_cudaq_dump_simulation_operator_branches(platform, platform_name, tmp_pa
     )
     assert controller._pulse_hamiltonian(
         mz_sequence,
-        platform.parameters.configs,
+        single_qubit_platform.parameters.configs,
     ) is None
 
     operator = controller.engine.identity_on_target(0, [2])
@@ -188,27 +178,28 @@ def test_cudaq_dump_simulation_operator_branches(platform, platform_name, tmp_pa
     controller.save_dir = tmp_path / "callable_waveform"
     controller._dump_simulation(
         mz_sequence,
-        platform.parameters.configs,
+        single_qubit_platform.parameters.configs,
         np.zeros((1, 2, 2)),
         None,
     )
     assert (controller.save_dir / "operators.qu").is_file()
 
 
-def test_cudaq_flux_control_operator_and_fallback(platform, platform_name):
-    _require_single_qubit_platform(platform_name)
+def test_cudaq_flux_control_operator_and_fallback(single_qubit_platform):
     engine = CudaqEngine()
-    hamiltonian = platform.parameters.configs["hamiltonian"]
+    hamiltonian = single_qubit_platform.parameters.configs["hamiltonian"]
     target = hamiltonian.hilbert_space_index(0)
 
     flux_operator = control_operator(
-        platform.parameters.configs[platform.qubits[0].flux],
+        single_qubit_platform.parameters.configs[single_qubit_platform.qubits[0].flux],
         hamiltonian,
         target,
         engine,
     )
     fallback_operator = control_operator(
-        platform.parameters.configs[platform.qubits[0].acquisition],
+        single_qubit_platform.parameters.configs[
+            single_qubit_platform.qubits[0].acquisition
+        ],
         hamiltonian,
         target,
         engine,
@@ -217,23 +208,6 @@ def test_cudaq_flux_control_operator_and_fallback(platform, platform_name):
     assert flux_operator is not None
     assert fallback_operator is None
 
-'''
-def test_cudaq_coupling_only_hamiltonian_branch(platform, platform_name):
-    if platform_name != "split-transmon-coupler-cudaq":
-        pytest.skip("Coupling-only branch requires a platform with coupling terms.")
-
-    class CouplingOnlyQubits(dict):
-        def items(self):
-            return []
-
-    engine = CudaqEngine()
-    hamiltonian = platform.parameters.configs["hamiltonian"]
-    coupling_only = hamiltonian.model_copy(
-        update={"qubits": CouplingOnlyQubits(hamiltonian.qubits)}
-    )
-
-    assert coupling_only.hamiltonian(platform.parameters.configs, engine) is not None
-'''
 
 def test_cudaq_engine_rungekutta_and_operator_wrappers():
     engine = CudaqEngine(integrator="rungekutta")

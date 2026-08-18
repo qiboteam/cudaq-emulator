@@ -24,6 +24,10 @@ def _cudaq_platform_names() -> list[str]:
     return names
 
 
+def _single_subsystem_platform_names() -> list[str]:
+    return ["qubit-cudaq", "qutrit-cudaq"]
+
+
 def pytest_generate_tests(metafunc) -> None:
     if "platform_name" in metafunc.fixturenames:
         names = _cudaq_platform_names()
@@ -48,3 +52,11 @@ def platform(monkeypatch, platform_name: str) -> qibolab.Platform:
 @pytest.fixture
 def split_transmon_coupler_platform(monkeypatch) -> qibolab.Platform:
     return _create_platform(monkeypatch, "split-transmon-coupler-cudaq")
+
+
+@pytest.fixture(
+    params=_single_subsystem_platform_names(),
+    ids=_single_subsystem_platform_names(),
+)
+def single_qubit_platform(monkeypatch, request) -> qibolab.Platform:
+    return _create_platform(monkeypatch, request.param)
