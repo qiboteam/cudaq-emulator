@@ -8,20 +8,9 @@ import pytest
 from qibolab._core.instruments.emulator.engine.qutip import QutipEngine
 from qibolab_cudaq_emulator import CudaqEngine
 
-TARGET_PLATFORM = "split-transmon-coupler-cudaq"
-
-
-def _require_target_platform(platform_name: str) -> None:
-    if platform_name != TARGET_PLATFORM:
-        pytest.skip(
-            f"Mapping diagnostics are specific to '{TARGET_PLATFORM}', got '{platform_name}'."
-        )
-
-
-def test_cudaq_basis_mapping_is_explicit(platform, platform_name):
-    _require_target_platform(platform_name)
+def test_cudaq_basis_mapping_is_explicit(split_transmon_coupler_platform):
     engine = CudaqEngine()
-    dims = platform.parameters.configs["hamiltonian"].dims
+    dims = split_transmon_coupler_platform.parameters.configs["hamiltonian"].dims
 
     basis_map = {
         (0, 0, 0): 0,
@@ -40,11 +29,11 @@ def test_cudaq_basis_mapping_is_explicit(platform, platform_name):
         assert int(np.argmax(np.abs(amplitudes))) == expected_index
 
 
-def test_cudaq_pair_01_coupling_matches_reference_subspace(platform, platform_name):
-    _require_target_platform(platform_name)
-    
+def test_cudaq_pair_01_coupling_matches_reference_subspace(
+    split_transmon_coupler_platform,
+):
     # Extract evolution time from platform's calibrated two-qubit gate duration
-    pair = platform.natives.two_qubit[0, 1]
+    pair = split_transmon_coupler_platform.natives.two_qubit[0, 1]
     if pair.iSWAP is None:
         pytest.skip(
             "iSWAP gate not properly calibrated in platform. "
@@ -58,8 +47,8 @@ def test_cudaq_pair_01_coupling_matches_reference_subspace(platform, platform_na
         )
     _, pulse = sequence[0]
     evolution_time = float(pulse.duration)
-    
-    cudaq_cfg = platform.parameters.configs["hamiltonian"]
+
+    cudaq_cfg = split_transmon_coupler_platform.parameters.configs["hamiltonian"]
     cudaq_engine = CudaqEngine()
     qutip_engine = QutipEngine()
 
@@ -97,19 +86,22 @@ def test_cudaq_pair_01_coupling_matches_reference_subspace(platform, platform_na
     assert cudaq_target_index == qutip_target_index
 
 
-def test_cudaq_iswap_pulse_transfers_excitation(platform, platform_name):
-    _require_target_platform(platform_name)
-    q0 = platform.natives.single_qubit[0]
-    q1 = platform.natives.single_qubit[1]
-    pair = platform.natives.two_qubit[0, 1]
+def test_cudaq_iswap_pulse_transfers_excitation(split_transmon_coupler_platform):
+    q0 = split_transmon_coupler_platform.natives.single_qubit[0]
+    q1 = split_transmon_coupler_platform.natives.single_qubit[1]
+    pair = split_transmon_coupler_platform.natives.two_qubit[0, 1]
 
     sequence = q0.RX()
     sequence |= pair.iSWAP()
     sequence |= q0.MZ() + q1.MZ()
 
-    control_handle = list(sequence.channel(platform.qubits[0].acquisition))[-1].id
-    target_handle = list(sequence.channel(platform.qubits[1].acquisition))[-1].id
-    result = platform.execute([sequence], nshots=2000)
+    control_handle = list(
+        sequence.channel(split_transmon_coupler_platform.qubits[0].acquisition)
+    )[-1].id
+    target_handle = list(
+        sequence.channel(split_transmon_coupler_platform.qubits[1].acquisition)
+    )[-1].id
+    result = split_transmon_coupler_platform.execute([sequence], nshots=2000)
 
     assert pytest.approx(result[target_handle].mean(), abs=2e-1) == 1
     assert pytest.approx(result[control_handle].mean(), abs=2e-1) == 0

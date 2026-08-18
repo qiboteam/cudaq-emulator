@@ -30,6 +30,11 @@ def pytest_generate_tests(metafunc) -> None:
         metafunc.parametrize("platform_name", names, ids=names)
 
 
+def _create_platform(monkeypatch, platform_name: str) -> qibolab.Platform:
+    monkeypatch.setenv("QIBOLAB_PLATFORMS", str(PLATFORMS_DIR))
+    return qibolab.create_platform(platform_name)
+
+
 @pytest.fixture(autouse=True)
 def seed() -> None:
     np.random.seed(42)
@@ -37,6 +42,9 @@ def seed() -> None:
 
 @pytest.fixture
 def platform(monkeypatch, platform_name: str) -> qibolab.Platform:
-    pytest.importorskip("cudaq")
-    monkeypatch.setenv("QIBOLAB_PLATFORMS", str(PLATFORMS_DIR))
-    return qibolab.create_platform(platform_name)
+    return _create_platform(monkeypatch, platform_name)
+
+
+@pytest.fixture
+def split_transmon_coupler_platform(monkeypatch) -> qibolab.Platform:
+    return _create_platform(monkeypatch, "split-transmon-coupler-cudaq")
