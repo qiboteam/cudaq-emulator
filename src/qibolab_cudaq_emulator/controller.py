@@ -25,11 +25,7 @@ from qibolab._core.instruments.emulator.hamiltonians import (
     Modulated,
     waveform,
 )
-from qibolab._core.instruments.emulator.results import (
-    acquisitions,
-    index,
-    results as collect_results,
-)
+from qibolab._core.instruments.emulator.results import acquisitions, index, results
 from qibolab._core.pulses import Delay, Pulse, PulseLike, VirtualZ
 from qibolab._core.sequence import PulseSequence
 from qibolab._core.sweeper import ParallelSweepers
@@ -67,9 +63,9 @@ class CudaqEmulatorController(EmulatorController):
             sweep_results = sweep_results[0]
 
         hamiltonian = cast(HamiltonianConfig, configs["hamiltonian"])
-        return collect_results(
+        return results(
             states=sweep_results,
-            sequence=sequence,
+            sequence=sequence[1],
             hamiltonian=hamiltonian,
             options=options,
         )
@@ -104,7 +100,7 @@ class CudaqEmulatorController(EmulatorController):
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
         config = cast(HamiltonianConfig, configs["hamiltonian"])
-        static = config.hamiltonian(config=configs, engine=self.engine)
+        static = static_hamiltonian(config, config=configs, engine=self.engine)
         evolution = self._pulse_hamiltonian(sequence, configs)
         if evolution is None:
             time_ops = []
@@ -117,12 +113,13 @@ class CudaqEmulatorController(EmulatorController):
 
     def _make_sweep_batches(
         self,
-        sequence: PulseSequence,
+        sequence_tuple: tuple[int, PulseSequence],
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: dict | None = None,
     ):
         updates = defaultdict(dict) | ({} if updates is None else updates)
+        _, sequence = sequence_tuple
 
         if len(sweepers) == 0:
             sequence_ = update_sequence(sequence, updates)
@@ -155,14 +152,19 @@ class CudaqEmulatorController(EmulatorController):
                         sweep_updates[channel].update({sweeper.parameter.name: value})
 
             batch_specs.append(
-                self._make_sweep_batches(sequence, configs, sweepers[1:], sweep_updates)
+                self._make_sweep_batches(
+                    sequence_tuple,
+                    configs,
+                    sweepers[1:],
+                    sweep_updates,
+                )
             )
 
         return batch_specs
 
     def _sweep(
         self,
-        sequence: PulseSequence,
+        sequence: tuple[int, PulseSequence],
         configs: dict[str, Config],
         sweepers: list[ParallelSweepers],
         updates: dict | None = None,
@@ -215,12 +217,15 @@ class CudaqEmulatorController(EmulatorController):
 
         sweepers_shape = [len(sweeper[0].values) for sweeper in sweepers]
         sweepers_shape += list(sweep_states.shape[1:])
-        sweep_states = sweep_states.reshape(sweepers_shape)
-        return sweep_states, None
+        return sweep_states.reshape(sweepers_shape), None
 
     def _evolve(
-        self, sequence, configs: dict[str, Config], updates: dict
-    ) -> NDArray | tuple[NDArray, np.ndarray | None]:
+        self,
+        sequence_tuple: tuple[int, PulseSequence],
+        configs: dict[str, Config],
+        updates: dict,
+    ) -> NDArray:
+        _, sequence = sequence_tuple
         sequence_ = update_sequence(sequence, updates)
         configs_ = update_configs(configs, updates)
         hconfig = cast(HamiltonianConfig, configs_["hamiltonian"])
@@ -254,13 +259,13 @@ class CudaqEmulatorController(EmulatorController):
             ]
         )[measurement_indices]
         coefficients = (
-            getattr(time_hamiltonian, "coefficients", None)
+            np.stack([coefficient for _, coefficient in time_hamiltonian.operators])
             if time_hamiltonian is not None
             else None
         )
         if self.save_dir is not None:
             self._dump_simulation(sequence_, configs_, states, coefficients)
-        return states, coefficients
+        return states
 
     def _pulse_hamiltonian(self, sequence, configs: dict[str, Config]):
         times = tlist(sequence)
@@ -283,10 +288,13 @@ class CudaqEmulatorController(EmulatorController):
             return None
 
         return AbstractOperatorEvolution(
-            [
+            operators=[
                 [operator, coefficient]
-                for operator, coefficient in zip(channels, raw_coefficients, strict=True)
-            ]
+                for operator, coefficient in zip(
+                    channels, raw_coefficients, strict=True
+                )
+            ],
+            times=times,
         )
     
 def hamiltonian(
