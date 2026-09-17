@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from qibolab._core.instruments.emulator.engine.abstract import OperatorEvolution
 from qibolab._core.instruments.emulator.engine.qutip import QutipEngine
 from qibolab_cudaq_emulator import CudaqEngine
 from qibolab_cudaq_emulator.hamiltonians import coupling_term
@@ -30,9 +31,7 @@ def test_cudaq_basis_mapping_is_explicit(split_transmon_coupler_platform):
         assert int(np.argmax(np.abs(amplitudes))) == expected_index
 
 
-def test_cudaq_pair_01_coupling_matches_reference_subspace(
-    split_transmon_coupler_platform,
-):
+def test_cudaq_pair_01_coupling_matches_reference_subspace(split_transmon_coupler_platform):
     # Extract evolution time from platform's calibrated two-qubit gate duration
     pair = split_transmon_coupler_platform.natives.two_qubit[0, 1]
     if pair.iSWAP is None:
@@ -48,7 +47,7 @@ def test_cudaq_pair_01_coupling_matches_reference_subspace(
         )
     _, pulse = sequence[0]
     evolution_time = float(pulse.duration)
-
+    
     cudaq_cfg = split_transmon_coupler_platform.parameters.configs["hamiltonian"]
     cudaq_engine = CudaqEngine()
     qutip_engine = QutipEngine()
@@ -60,10 +59,11 @@ def test_cudaq_pair_01_coupling_matches_reference_subspace(
         cudaq_cfg.dims,
         [cudaq_cfg.hilbert_space_index(0), cudaq_cfg.hilbert_space_index(1)],
     )
-    qutip_result = qutip_engine.evolve(
+    qutip_result, _ = qutip_engine.evolve(
         hamiltonian=qutip_hamiltonian,
         initial_state=qutip_engine.basis(cudaq_cfg.dims, [1, 0, 0]),
         time=[0.0, evolution_time],
+        time_hamiltonian=OperatorEvolution(),
         collapse_operators=[],
     )
     qutip_state = qutip_result.states[1].full()[:, 0]
