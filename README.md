@@ -4,7 +4,7 @@ External CUDA-Q emulator plugin for qibolab.
 
 ## Compatibility
 
-- qibolab = 0.2.15
+- qibolab = 0.2.16
 - cudaq = 0.14.0
 - Python >= 3.11
 
@@ -32,15 +32,6 @@ From this directory:
 pip install -e .
 ```
 
-If `cudaq==0.14.0` resolves to an unusable CUDA Quantum runtime package on your
-system, install the matching runtime wheel explicitly first and then install the
-plugin:
-
-```bash
-pip install cuda-quantum-cu12==0.14.0
-pip install -e .
-```
-
 ## How to Use in a Platform
 
 Assume you already have a working qibolab emulator platform definition.
@@ -61,9 +52,9 @@ In your `instruments` mapping, replace `EmulatorController(...)` with
 
 ### 3. Keep the existing emulator config kinds
 
-The plugin works with qibolab's standard emulator configs, so you can keep the
-existing `HamiltonianConfig`, `DriveEmulatorConfig`, and `FluxEmulatorConfig`
-wiring in both Python and `parameters.json`.
+The plugin works with qibolab's standard emulator configs, so keep the existing
+`HamiltonianConfig`, `DriveEmulatorConfig`, and `FluxEmulatorConfig` wiring in
+both Python and `parameters.json`.
 
 The snippet below shows the key edits in one place:
 
@@ -82,7 +73,7 @@ instruments = {
     "emulator": CudaqEmulatorController(address="0.0.0.0", channels=channels),
 }
 
-Reference platform examples corresponding to those found in qibolab 0.2.15 are available under [tests/platforms](tests/platforms).
+Reference platform examples corresponding to those found in qibolab 0.2.16 are available under [tests/platforms](tests/platforms).
 
 ## Test Suite
 
@@ -105,7 +96,7 @@ Current focus:
 
 - plugin-local CUDA-Q engine and controller behavior
 - plugin-local subsystem remapping and state extraction
-- compatibility with qibolab 0.2.15+ platform loading and emulator flow
+- compatibility with qibolab 0.2.16 platform loading and emulator flow
 
 Out of scope for now:
 

@@ -7,20 +7,23 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.interpolate import make_interp_spline
 
 from qibolab._core.instruments.emulator.engine.abstract import (
     EvolutionResult,
+    HAMILTONIAN_FILENAME,
+    INTEGRATION_MIN_TIME_STEP,
+    INTEGRATION_MULTIPLIER,
     Operator,
     OperatorEvolution,
     SimulationEngine,
 )
 from qibolab._core.instruments.emulator.engine.qutip import (
-    HAMILTONIAN_FILENAME,
     INTEGRATION_MAX_TIME_STEP,
-    INTEGRATION_MIN_TIME_STEP,
-    INTEGRATION_MULTIPLIER,
-    STATE_FILENAME,
+    SPLINE_INTERP_ORDER,
 )
+
+STATE_FILENAME = "State_Evolution"
 
 
 @dataclass
@@ -159,7 +162,16 @@ class CudaqEngine(SimulationEngine):
 
         return OperatorEvolution(
             [
-                [operator, cls._scalar_callback(waveform)]
+                [
+                    operator,
+                    cls._scalar_callback(
+                        make_interp_spline(
+                            time_hamiltonian.times,
+                            waveform,
+                            k=SPLINE_INTERP_ORDER,
+                        )
+                    ),
+                ]
                 for operator, waveform in time_hamiltonian.operators
             ]
         )

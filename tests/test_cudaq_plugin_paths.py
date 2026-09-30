@@ -104,7 +104,7 @@ def test_cudaq_batch_sweep_accepts_single_result(single_qubit_platform, monkeypa
     )
 
     states, coefficients = controller._sweep(
-        sequence.align_to_delays(),
+        (0, sequence.align_to_delays()),
         single_qubit_platform.parameters.configs,
         [[sweeper]],
     )
@@ -134,9 +134,7 @@ def test_cudaq_save_evolution_artifacts(single_qubit_platform, tmp_path):
     assert len(state_payload.states) == 2
 
 
-def test_cudaq_dump_simulation_operator_branches(
-    single_qubit_platform, tmp_path, monkeypatch
-):
+def test_cudaq_dump_simulation_operator_branches(single_qubit_platform, tmp_path, monkeypatch):
     controller = _controller(single_qubit_platform)
     q0 = single_qubit_platform.natives.single_qubit[0]
     mz_sequence = q0.MZ()
@@ -208,7 +206,6 @@ def test_cudaq_flux_control_operator_and_fallback(single_qubit_platform):
     assert flux_operator is not None
     assert fallback_operator is None
 
-
 def test_cudaq_engine_rungekutta_and_operator_wrappers():
     engine = CudaqEngine(integrator="rungekutta")
     hamiltonian = 0.0 * engine.identity(2)
@@ -219,7 +216,10 @@ def test_cudaq_engine_rungekutta_and_operator_wrappers():
     with pytest.raises(ValueError):
         CudaqEngine(integrator="unknown")._integrator([0.0, 0.1])
 
-    time_hamiltonian = OperatorEvolution([[engine.identity(2), lambda time: 1.0]])
+    time_hamiltonian = OperatorEvolution(
+        operators=[[engine.identity(2), np.array([1.0, 1.0, 1.0, 1.0])]],
+        times=np.array([0.0, 0.1, 0.2, 0.3]),
+    )
     assert engine._compatible_time_hamiltonian(time_hamiltonian) is not None
     assert engine.expand(engine.create(2), targets=0, dims=[2]) is not None
     assert engine.destroy(2) is not None
